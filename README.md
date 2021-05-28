@@ -21,3 +21,5 @@ Run
 ```
 Run AI Mouse.py
 ```
+## Demo
+![demo](https://github.com/siddharthgangwar25/Virtual-Mouse-ComputerVision/blob/main/Demo.gif)
