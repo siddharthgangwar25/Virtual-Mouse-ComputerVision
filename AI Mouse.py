@@ -4,9 +4,25 @@ import autopy
 import time
 import HandTrackingModule as htm
 
+#For Volume
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+
+devices = AudioUtilities.GetSpeakers()
+interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+volume = cast(interface, POINTER(IAudioEndpointVolume))
+volRange = volume.GetVolumeRange()
+minVol = volRange[0]
+maxVol = volRange[1]
+vol = 0
+volBar = 400
+volPer = 0
+
+#Frame
 wCam, hCam = 640, 480
 wScr, hScr = autopy.screen.size()
-frameR = 110  #Movement Frame
+frameR = 110
 smoothening = 5
 
 pTime = 0
@@ -32,7 +48,7 @@ while True:
         #Check which fingers up
         fingers = detector.fingersUp()
         cv2.rectangle(img, (frameR, frameR), (wCam - frameR, hCam - frameR - 15), (255, 0, 255), 2)  # Eligible Frame for movement
-        if fingers[1] == 1 and fingers[2] == 0:
+        if fingers[1] == 1 and fingers[0] == 0 and fingers[2:] == [0, 0, 0]:
             x3 = np.interp(x1, (frameR, wCam-frameR), (0, wScr))
             y3 = np.interp(y1, (frameR, hCam-frameR - 15), (0, hScr))
 
@@ -48,7 +64,19 @@ while True:
             if length < 30: #If distance less than threshold
                 autopy.mouse.click() #Click
                 cv2.circle(img, (info[4], info[5]), 9, (255, 0, 0), cv2.FILLED)
+        
+        if fingers[0] == 1 and fingers[1] == 1 and fingers[2:4] == [0, 0] and fingers[4] == 1:
+            length, img, _ = detector.findDistance(4, 8, img)
+            vol = np.interp(length, [30, 120], [minVol, maxVol])
+            volBar = np.interp(length, [30, 120], [400, 150])
+            volPer = np.interp(length, [30, 120], [0, 100])
+            # print(int(length), vol)
+            volume.SetMasterVolumeLevel(vol, None)
 
+            cv2.rectangle(img, (30, 150), (40, 400), (255, 0, 0), 3)
+            cv2.rectangle(img, (30, int(volBar)), (40, 400), (255, 0, 0), cv2.FILLED)
+            cv2.putText(img, f'{int(volPer)} %', (18, 425), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+                
     #FPS
     cTime = time.time()
     fps = 1 / (cTime - pTime)
